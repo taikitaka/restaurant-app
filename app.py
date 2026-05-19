@@ -5,13 +5,13 @@ from psycopg2.extras import DictCursor
 
 app = Flask(__name__)
 
-# 👑 データベース接続関数（教えてもらった本物のExternal URLです）
+# 👑 データベース接続関数（環境変数からURLを取得）
 def get_db_connection():
-    DATABASE_URL = "postgresql://restaurant_db_4ntk_user:Gk3pldNQ6ngxL5lbMWek5zYSMZ5aJnfl@dpg-d85ts5f7f7vs73dfrfu0-a.oregon-postgres.render.com/restaurant_db_4ntk"
+    DATABASE_URL = os.environ.get('DATABASE_URL')
     conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     return conn
 
-# 👑 初回起動時にテーブルを用意する（文法エラーを修正しました！）
+# 👑 初回起動時にテーブルを用意する
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -53,7 +53,11 @@ def init_db():
     cur.close()
     conn.close()
 
-init_db()
+# ✅ エラーが起きてもログに表示してクラッシュしないようにする
+try:
+    init_db()
+except Exception as e:
+    print(f"DB初期化エラー: {e}")
 
 # 🏠 トップ画面（一覧表示）
 @app.route('/')
@@ -74,19 +78,26 @@ def index():
 # ➕ 食材の追加
 @app.route('/add', methods=['POST'])
 def add_ingredient():
-    category = request.form['category']
-    name = request.form['name']
-    unit = request.form['unit']
+    category = request.form.get('category', 'なし')
+    name = request.form.get('name', 'なし')
+    unit = request.form.get('unit', 'なし')
     
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO ingredients (category, name, unit, stock, order_qty, status) VALUES (%s, %s, %s, 0, 0, '未発注');",
-        (category, name, unit)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
+    print(f"受信データ: category={category}, name={name}, unit={unit}")  # ← 追加
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO ingredients (category, name, unit, stock, order_qty, status) VALUES (%s, %s, %s, 0, 0, '未発注');",
+            (category, name, unit)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("DB保存成功！")  # ← 追加
+    except Exception as e:
+        print(f"DBエラー: {e}")  # ← 追加
+    
     return redirect('/')
 
 # ➕ 取引先の追加
