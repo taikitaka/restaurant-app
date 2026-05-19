@@ -19,6 +19,7 @@ def get_db_connection():
 def init_db():
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
+            # 1. 食材用のテーブル（既存）
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS ingredients (
                     id SERIAL PRIMARY KEY,
@@ -27,6 +28,16 @@ def init_db():
                     stock INTEGER DEFAULT 0,
                     order_qty INTEGER DEFAULT 0,
                     unit TEXT NOT NULL
+                )
+            ''')
+            
+            # 2. 📞 取引先（宛先）用の新しいテーブルを追加！
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS contacts (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,        -- 取引先の名（〇〇八百屋 など）
+                    phone TEXT,                -- 電話番号
+                    note TEXT                  -- メモ（LINEのリンクや担当者名など）
                 )
             ''')
             conn.commit()
