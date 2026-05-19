@@ -34,7 +34,8 @@ def insert_sample_data():
             cursor.executemany("INSERT INTO ingredients (category, name, stock, order_qty, unit) VALUES (?, ?, ?, ?, ?)", samples)
             conn.commit()
 
-@app.route('/')
+@app.route(''
+'/')
 def index():
     with sqlite3.connect(DB_NAME) as conn:
         conn.row_factory = sqlite3.Row  # 辞書型でデータを取得できるようにする
@@ -76,4 +77,9 @@ def action(item_id):
 if __name__ == '__main__':
     init_db()
     insert_sample_data()
-    app.run(debug=True)
+    import os
+
+    if __name__ == '__main__':
+        # Render環境のポート（通り道）に自動対応させる設定
+        port = int(os.environ.get("PORT", 5000))
+        app.run(host="0.0.0.0", port=port)
