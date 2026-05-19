@@ -6,7 +6,7 @@ from psycopg2.extras import DictCursor
 app = Flask(__name__)
 
 # 🔑 Renderのデータベース接続URLを取得する
-DATABASE_URL = os.environ.get('DATABASE_URL', "ここに先ほどコピーしたpostgres://...のURLを貼り付けてください")
+DATABASE_URL = os.environ.get('DATABASE_URL', "postgresql://restaurant_db_4ntk_user:Gk3pldNQ6ngxL5lbMWek5zYSMZ5aJnfl@dpg-d85ts5f7f7vs73dfrfu0-a/restaurant_db_4ntk")
 
 # データベースに接続する共通の関数
 def get_db_connection():
