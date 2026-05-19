@@ -142,4 +142,6 @@ def handle_action(item_id):
     return redirect('/')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Renderのポート番号を自動取得し、0.0.0.0 で待ち受けます
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
