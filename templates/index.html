@@ -7,18 +7,9 @@
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { text-align: center; font-size: 24px; color: #2c3e50; }
-        .add-form { background: #eef2f3; padding: 15px; border-radius: 6px; margin-top: 20px; margin-bottom: 20px; }
-        .add-form input, .add-form select, .add-form button { padding: 8px; margin-right: 5px; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f8f9fa; }
-        .qty-input { width: 60px; text-align: center; padding: 6px; font-size: 16px; }
-        .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .btn-order { background-color: #3498db; color: white; }
-        .btn-deliver { background-color: #2ecc71; color: white; margin-left: 5px; }
-        .btn-add { background-color: #34495e; color: white; }
+        h1 { text-align: center; font-size: 24px; color: #2c3e50; margin-bottom: 25px; }
         
+        /* 全体開閉用の大きなボタン */
         .btn-toggle {
             width: 100%;
             padding: 15px;
@@ -32,12 +23,50 @@
             margin-bottom: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .btn-toggle-contact {
-            background-color: #16a085;
+        .btn-toggle-contact { background-color: #16a085; }
+        .hidden-list { display: none; }
+
+        /* 📁 カテゴリごとのアコーディオン（ヘッダー） */
+        .accordion-header {
+            background-color: #34495e;
+            color: white;
+            padding: 10px 15px;
+            margin-top: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .hidden-list {
+        .accordion-header:hover { background-color: #2c3e50; }
+        
+        /* アコーディオンの中身（デフォルトは非表示） */
+        .accordion-content {
             display: none;
+            padding: 5px 0;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            background: #fff;
+            margin-bottom: 10px;
         }
+        /* 最初から開いておきたい場合などの調整用クラス */
+        .show { display: block; }
+
+        /* テーブルをよりコンパクトに */
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; color: #666; font-size: 12px; }
+        
+        .qty-input { width: 50px; text-align: center; padding: 4px; font-size: 15px; }
+        .btn { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .btn-order { background-color: #3498db; color: white; }
+        .btn-deliver { background-color: #2ecc71; color: white; margin-left: 3px; }
+        .btn-add { background-color: #34495e; color: white; width: 100%; margin-top: 8px; box-sizing: border-box; }
+        
+        .add-form { background: #eef2f3; padding: 12px; border-radius: 6px; margin: 15px 0; }
+        .add-form input, .add-form select { padding: 8px; font-size: 14px; margin-bottom: 5px; width: 100%; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -48,41 +77,87 @@
     <button type="button" class="btn-toggle" onclick="toggleSection('list-container')">📋 在庫・発注リストを表示する</button>
 
     <div id="list-container" class="hidden-list">
-        <table>
-            <thead>
-                <tr>
-                    <th>食材名</th>
-                    <th>在庫</th>
-                    <th>発注数</th>
-                    <th>アクション</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in ingredients %}
-                <tr>
-                    <td>
-                        <strong>{{ item.name }}</strong><br>
-                        <small style="color: #888;">{{ item.category }}</small>
-                    </td>
-                    <td>{{ item.stock }} {{ item.unit }}</td>
-                    <td>
-                        <input type="number" id="qty-{{ item.id }}" value="{{ item.order_qty }}" class="qty-input" min="0"> {{ item.unit }}
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-order" onclick="shareOrder('{{ item.name }}', '{{ item.id }}', '{{ item.unit }}')">🚀 発注</button>
-                        
-                        <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
-                            <input type="hidden" name="order_qty" value="1">
-                            <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        
+        <div class="accordion-header" onclick="toggleAccordion('content-vegetable')">
+            <span>🥬 野菜エリア</span>
+            <span class="arrow">▼</span>
+        </div>
+        <div id="content-vegetable" class="accordion-content">
+            <table>
+                <thead><tr><th>食材名</th><th>在庫</th><th>発注</th><th>操作</th></tr></thead>
+                <tbody>
+                    {% for item in ingredients if item.category == '野菜' %}
+                    <tr>
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td>{{ item.stock }}{{ item.unit }}</td>
+                        <td><input type="number" id="qty-{{ item.id }}" value="{{ item.order_qty }}" class="qty-input" min="0"></td>
+                        <td>
+                            <button type="button" class="btn btn-order" onclick="shareOrder('{{ item.name }}', '{{ item.id }}', '{{ item.unit }}')">🚀</button>
+                            <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="order_qty" value="1">
+                                <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="accordion-header" onclick="toggleAccordion('content-meat')">
+            <span>🍖 肉類エリア</span>
+            <span class="arrow">▼</span>
+        </div>
+        <div id="content-meat" class="accordion-content">
+            <table>
+                <thead><tr><th>食材名</th><th>在庫</th><th>発注</th><th>操作</th></tr></thead>
+                <tbody>
+                    {% for item in ingredients if item.category == '肉類' %}
+                    <tr>
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td>{{ item.stock }}{{ item.unit }}</td>
+                        <td><input type="number" id="qty-{{ item.id }}" value="{{ item.order_qty }}" class="qty-input" min="0"></td>
+                        <td>
+                            <button type="button" class="btn btn-order" onclick="shareOrder('{{ item.name }}', '{{ item.id }}', '{{ item.unit }}')">🚀</button>
+                            <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="order_qty" value="1">
+                                <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="accordion-header" onclick="toggleAccordion('content-seasoning')">
+            <span>🧂 調味料エリア</span>
+            <span class="arrow">▼</span>
+        </div>
+        <div id="content-seasoning" class="accordion-content">
+            <table>
+                <thead><tr><th>食材名</th><th>在庫</th><th>発注</th><th>操作</th></tr></thead>
+                <tbody>
+                    {% for item in ingredients if item.category == '調味料' %}
+                    <tr>
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td>{{ item.stock }}{{ item.unit }}</td>
+                        <td><input type="number" id="qty-{{ item.id }}" value="{{ item.order_qty }}" class="qty-input" min="0"></td>
+                        <td>
+                            <button type="button" class="btn btn-order" onclick="shareOrder('{{ item.name }}', '{{ item.id }}', '{{ item.unit }}')">🚀</button>
+                            <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="order_qty" value="1">
+                                <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
         <div class="add-form">
-            <h3>食材の追加</h3>
+            <h3>➕ 食材の追加</h3>
             <form action="/add" method="POST">
                 <select name="category">
                     <option value="野菜">野菜</option>
@@ -90,8 +165,8 @@
                     <option value="調味料">調味料</option>
                 </select>
                 <input type="text" name="name" placeholder="食材名（例: 玉ねぎ）" required>
-                <input type="text" name="unit" placeholder="単位（例: 個）" style="width: 80px;" required>
-                <button type="submit" class="btn btn-add">追加</button>
+                <input type="text" name="unit" placeholder="単位（例: 個、本、kg）" required>
+                <button type="submit" class="btn btn-add">リストに追加</button>
             </form>
         </div>
     </div>
@@ -100,23 +175,13 @@
 
     <div id="contact-container" class="hidden-list">
         <table>
-            <thead>
-                <tr>
-                    <th>取引先名</th>
-                    <th>電話番号</th>
-                    <th>メモ（担当者・LINE等）</th>
-                </tr>
-            </thead>
+            <thead><tr><th>取引先名</th><th>電話番号</th><th>メモ</th></tr></thead>
             <tbody>
                 {% for contact in contacts %}
                 <tr>
                     <td><strong>{{ contact.name }}</strong></td>
                     <td>
-                        {% if contact.phone %}
-                            <a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>
-                        {% else %}
-                            <span style="color: #ccc;">未登録</span>
-                        {% endif %}
+                        {% if contact.phone %}<a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>{% else %}<span style="color: #ccc;">未登録</span>{% endif %}
                     </td>
                     <td><small style="color: #555;">{{ contact.note or '' }}</small></td>
                 </tr>
@@ -125,27 +190,35 @@
         </table>
 
         <div class="add-form">
-            <h3>取引先の追加</h3>
+            <h3>➕ 取引先の追加</h3>
             <form action="/add_contact" method="POST">
-                <input type="text" name="name" placeholder="取引先名（例: 〇〇八百屋）" required style="width: 140px;">
-                <input type="tel" name="phone" placeholder="電話番号" style="width: 110px;">
-                <input type="text" name="note" placeholder="メモ（LINEリンクなど）" style="width: 150px;">
-                <button type="submit" class="btn btn-add">登録</button>
+                <input type="text" name="name" placeholder="取引先名（例: 〇〇八百屋）" required>
+                <input type="tel" name="phone" placeholder="電話番号">
+                <input type="text" name="note" placeholder="メモ（LINEリンクなど）">
+                <button type="submit" class="btn btn-add">連絡先を登録</button>
             </form>
         </div>
     </div>
 </div>
 
 <script>
+// 大きなセクションの開閉
 function toggleSection(elementId) {
     var container = document.getElementById(elementId);
-    if (container.classList.contains('hidden-list')) {
-        container.classList.remove('hidden-list');
+    container.classList.toggle('hidden-list');
+}
+
+// 📁 カテゴリごとのアコーディオン開閉（新機能！）
+function toggleAccordion(contentId) {
+    var content = document.getElementById(contentId);
+    if (content.style.display === "block") {
+        content.style.display = "none";
     } else {
-        container.classList.add('hidden-list');
+        content.style.display = "block";
     }
 }
 
+// シェア・発注機能
 function shareOrder(name, id, unit) {
     var qtyInput = document.getElementById('qty-' + id);
     var qty = qtyInput ? qtyInput.value : 0;
@@ -158,15 +231,11 @@ function shareOrder(name, id, unit) {
     var textMessage = "【発注依頼】\n以下の食材の発注をお願いします。\n\n・" + name + " ： " + qty + " " + unit + "\n\nよろしくお願いします。";
 
     if (navigator.share) {
-        navigator.share({
-            title: '食材発注',
-            text: textMessage
-        })
-        .then(() => console.log('シェア成功！'))
+        navigator.share({ title: '食材発注', text: textMessage })
         .catch((error) => console.log('シェアキャンセル', error));
     } else {
         navigator.clipboard.writeText(textMessage).then(function() {
-            alert('このブラウザは直接シェアに対応していません。\n発注文章をコピーしましたので、LINE等に貼り付けてください！\n\n' + textMessage);
+            alert('発注文章をコピーしました！LINE等に貼り付けてください。\n\n' + textMessage);
         });
     }
 }
