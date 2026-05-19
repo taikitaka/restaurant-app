@@ -1,120 +1,143 @@
-from flask import Flask, render_template, request, redirect, url_for
 import os
+from flask import Flask, render_template, request, redirect
 import psycopg2
 from psycopg2.extras import DictCursor
 
 app = Flask(__name__)
 
-# 🔑 Renderのデータベース接続URL（田中さんのURLに設定済みです！）
-DATABASE_URL = os.environ.get('DATABASE_URL', "postgresql://restaurant_db_4ntk_user:Gk3pldNQ6ngxL5lbMWek5zYSMZ5aJnfl@dpg-d85ts5f7f7vs73dfrfu0-a/restaurant_db_4ntk")
-
+# 👑 データベース接続関数
 def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
+    DATABASE_URL = "postgresql://restaurant_db_user:XfT8087C9NHe9oT5n764r3M58bS07z0D@dpg-cuj6gbt6l47c73e160a0-a.singapore.postgresql.render.com/restaurant_db"
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     return conn
 
+# 👑 初回起動時にテーブルを用意する（statusとunitの更新に対応）
 def init_db():
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            # 1. 食材用のテーブル
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS ingredients (
-                    id SERIAL PRIMARY KEY,
-                    category TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    stock INTEGER DEFAULT 0,
-                    order_qty INTEGER DEFAULT 0,
-                    unit TEXT NOT NULL
-                )
-            ''')
-            # 2. 📞 取引先（宛先）用のテーブル
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS contacts (
-                    id SERIAL PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    phone TEXT,
-                    note TEXT
-                )
-            ''')
-            conn.commit()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # 食材テーブル（statusとunitを追加）
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS ingredients (
+            id SERIAL PRIMARY KEY,
+            category TEXT NOT EXISTS,
+            name TEXT NOT EXISTS,
+            stock INTEGER DEFAULT 0,
+            unit TEXT DEFAULT '個',
+            order_qty INTEGER DEFAULT 0,
+            status TEXT DEFAULT '未発注'
+        );
+    ''')
+    # 取引先テーブル
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS contacts (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT EXISTS,
+            phone TEXT,
+            note TEXT
+        );
+    ''')
+    
+    # 既存のデータベースにカラムが存在しない場合の対策（エラー防止）
+    try:
+        cur.execute("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT '未発注';")
+        cur.execute("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT '個';")
+    except Exception:
+        pass
 
-def insert_sample_data():
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM ingredients")
-            if cursor.fetchone()[0] == 0:
-                samples = [
-                    ("野菜", "キャベツ", 2, 3, "玉"),
-                    ("野菜", "トマト", 0, 1, "箱"),
-                    ("肉類", "鶏もも肉", 5, 0, "kg")
-                ]
-                for sample in samples:
-                    cursor.execute(
-                        "INSERT INTO ingredients (category, name, stock, order_qty, unit) VALUES (%s, %s, %s, %s, %s)",
-                        sample
-                    )
-                conn.commit()
+    conn.commit()
+    cur.close()
+    conn.close()
 
+init_db()
+
+# 🏠 トップ画面（一覧表示）
 @app.route('/')
 def index():
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=DictCursor) as cursor:
-            cursor.execute("SELECT * FROM ingredients ORDER BY id ASC")
-            ingredients = cursor.fetchall()
-            
-            cursor.execute("SELECT * FROM contacts ORDER BY id ASC")
-            contacts = cursor.fetchall()
-            
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=DictCursor)
+    
+    cur.execute('SELECT * FROM ingredients ORDER BY id ASC;')
+    ingredients = cur.fetchall()
+    
+    cur.execute('SELECT * FROM contacts ORDER BY id ASC;')
+    contacts = cur.fetchall()
+    
+    cur.close()
+    conn.close()
     return render_template('index.html', ingredients=ingredients, contacts=contacts)
 
-@app.route('/add', methods=['POST'])
+# ➕ 食材の追加
+@app.route('/add', method=['POST'])
 def add_ingredient():
-    name = request.form.get('name')
-    category = request.form.get('category')
-    unit = request.form.get('unit')
+    category = request.form['category']
+    name = request.form['name']
+    unit = request.form['unit']
     
-    if name:
-        with get_db_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO ingredients (category, name, stock, order_qty, unit) VALUES (%s, %s, 0, 0, %s)",
-                    (category, name, unit)
-                )
-                conn.commit()
-    return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        'INSERT INTO ingredients (category, name, unit, stock, order_qty, status) VALUES (%s, %s, %s, 0, 0, \'未発注\');',
+        (category, name, unit)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect('/')
 
-@app.route('/add_contact', methods=['POST'])
+# ➕ 取引先の追加
+@app.route('/add_contact', method=['POST'])
 def add_contact():
-    name = request.form.get('name')
-    phone = request.form.get('phone')
-    note = request.form.get('note')
+    name = request.form['name']
+    phone = request.form['phone']
+    note = request.form['note']
     
-    if name:
-        with get_db_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO contacts (name, phone, note) VALUES (%s, %s, %s)",
-                    (name, phone, note)
-                )
-                conn.commit()
-    return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO contacts (name, phone, note) VALUES (%s, %s, %s);', (name, phone, note))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect('/')
 
-@app.route('/action/<int:item_id>', methods=['POST'])
-def action(item_id):
+# 🔄 各食材の「保存」や「納品」などのアクションを一括受付
+@app.route('/action/<int:item_id>', method=['POST'])
+def handle_action(item_id):
     action_type = request.form.get('action_type')
-    order_qty = int(request.form.get('order_qty', 0))
     
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            if action_type == 'order':
-                cursor.execute("UPDATE ingredients SET order_qty = %s WHERE id = %s", (order_qty, item_id))
-            elif action_type == 'deliver':
-                cursor.execute("UPDATE ingredients SET stock = stock + order_qty, order_qty = 0 WHERE id = %s", (item_id,))
-            conn.commit()
-            
-    return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    if action_type == 'update_ingredient':
+        # ②在庫数と③単位、および発注予定数を手動で保存する
+        stock = request.form.get('stock', 0)
+        unit = request.form.get('unit', '個')
+        order_qty = request.form.get('order_qty', 0)
+        
+        cur.execute(
+            'UPDATE ingredients SET stock = %s, unit = %s, order_qty = %s WHERE id = %s;',
+            (stock, unit, order_qty, item_id)
+        )
+        
+    elif action_type == 'ordered':
+        # ④発注ボタンが押されたら「発注済み」にする
+        order_qty = request.form.get('order_qty', 0)
+        cur.execute(
+            'UPDATE ingredients SET status = \'発注済み\', order_qty = %s WHERE id = %s;',
+            (order_qty, item_id)
+        )
+        
+    elif action_type == 'deliver':
+        # ④納品ボタンが押されたら、在庫を増やして「未発注」に戻す
+        order_qty = int(request.form.get('order_qty', 0))
+        cur.execute(
+            'UPDATE ingredients SET stock = stock + %s, order_qty = 0, status = \'未発注\' WHERE id = %s;',
+            (order_qty, item_id)
+        )
+        
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect('/')
 
 if __name__ == '__main__':
-    init_db()
-    insert_sample_data()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
