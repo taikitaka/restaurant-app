@@ -5,9 +5,9 @@ from psycopg2.extras import DictCursor
 
 app = Flask(__name__)
 
-# 👑 データベース接続関数（環境変数からURLを取得）
+# 👑 データベース接続関数
 def get_db_connection():
-    DATABASE_URL = os.environ.get('DATABASE_URL')
+    DATABASE_URL = "postgresql://restaurant_db_4ntk_user:Gk3pldNQ6ngxL5lbMWek5zYSMZ5aJnfl@dpg-d85ts5f7f7vs73dfrfu0-a.oregon-postgres.render.com/restaurant_db_4ntk"
     conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     return conn
 
@@ -39,7 +39,7 @@ def init_db():
         );
     ''')
     
-    # 既存のデータベースがある場合、新しいカラムを安全に追加する
+    # カラムの追加確認
     try:
         cur.execute("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT '未発注';")
     except Exception:
@@ -53,11 +53,7 @@ def init_db():
     cur.close()
     conn.close()
 
-# ✅ エラーが起きてもログに表示してクラッシュしないようにする
-try:
-    init_db()
-except Exception as e:
-    print(f"DB初期化エラー: {e}")
+init_db()
 
 # 🏠 トップ画面（一覧表示）
 @app.route('/')
@@ -75,32 +71,25 @@ def index():
     conn.close()
     return render_template('index.html', ingredients=ingredients, contacts=contacts)
 
-# ➕ 食材の追加
+# ➕ 食材の追加（methods に修正しました！）
 @app.route('/add', methods=['POST'])
 def add_ingredient():
-    category = request.form.get('category', 'なし')
-    name = request.form.get('name', 'なし')
-    unit = request.form.get('unit', 'なし')
+    category = request.form['category']
+    name = request.form['name']
+    unit = request.form['unit']
     
-    print(f"受信データ: category={category}, name={name}, unit={unit}")  # ← 追加
-    
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO ingredients (category, name, unit, stock, order_qty, status) VALUES (%s, %s, %s, 0, 0, '未発注');",
-            (category, name, unit)
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("DB保存成功！")  # ← 追加
-    except Exception as e:
-        print(f"DBエラー: {e}")  # ← 追加
-    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO ingredients (category, name, unit, stock, order_qty, status) VALUES (%s, %s, %s, 0, 0, '未発注');",
+        (category, name, unit)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
     return redirect('/')
 
-# ➕ 取引先の追加
+# ➕ 取引先の追加（methods に修正しました！）
 @app.route('/add_contact', methods=['POST'])
 def add_contact():
     name = request.form['name']
@@ -115,7 +104,7 @@ def add_contact():
     conn.close()
     return redirect('/')
 
-# 🔄 各食材のアクションを一括受付
+# 🔄 各食材のアクションを一括受付（methods に修正しました！）
 @app.route('/action/<int:item_id>', methods=['POST'])
 def handle_action(item_id):
     action_type = request.form.get('action_type')
@@ -153,6 +142,5 @@ def handle_action(item_id):
     return redirect('/')
 
 if __name__ == '__main__':
-    # Renderのポート番号を自動取得し、0.0.0.0 で待ち受けます
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
