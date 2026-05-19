@@ -5,42 +5,46 @@ from psycopg2.extras import DictCursor
 
 app = Flask(__name__)
 
-# 👑 データベース接続関数
+# 👑 データベース接続関数（教えてもらった本物のExternal URLです）
 def get_db_connection():
-    # 教えていただいた100%正しいオレゴンのExternal URLに差し替えました
     DATABASE_URL = "postgresql://restaurant_db_4ntk_user:Gk3pldNQ6ngxL5lbMWek5zYSMZ5aJnfl@dpg-d85ts5f7f7vs73dfrfu0-a.oregon-postgres.render.com/restaurant_db_4ntk"
     conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     return conn
 
-# 👑 初回起動時にテーブルを用意する（statusとunitの更新に対応）
+# 👑 初回起動時にテーブルを用意する（文法エラーを修正しました！）
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
-    # 食材テーブル（statusとunitを追加）
+    
+    # 食材テーブル
     cur.execute('''
         CREATE TABLE IF NOT EXISTS ingredients (
             id SERIAL PRIMARY KEY,
-            category TEXT NOT EXISTS,
-            name TEXT NOT EXISTS,
+            category TEXT,
+            name TEXT,
             stock INTEGER DEFAULT 0,
             unit TEXT DEFAULT '個',
             order_qty INTEGER DEFAULT 0,
             status TEXT DEFAULT '未発注'
         );
     ''')
+    
     # 取引先テーブル
     cur.execute('''
         CREATE TABLE IF NOT EXISTS contacts (
             id SERIAL PRIMARY KEY,
-            name TEXT NOT EXISTS,
+            name TEXT,
             phone TEXT,
             note TEXT
         );
     ''')
     
-    # 既存のデータベースにカラムが存在しない場合の対策（エラー防止）
+    # 既存のデータベースがある場合、新しいカラムを安全に追加する
     try:
         cur.execute("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT '未発注';")
+    except Exception:
+        pass
+    try:
         cur.execute("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT '個';")
     except Exception:
         pass
@@ -68,7 +72,7 @@ def index():
     return render_template('index.html', ingredients=ingredients, contacts=contacts)
 
 # ➕ 食材の追加
-@app.route('/add', method=['POST'])
+@app.route('/add', methods=['POST'])
 def add_ingredient():
     category = request.form['category']
     name = request.form['name']
@@ -77,7 +81,7 @@ def add_ingredient():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        'INSERT INTO ingredients (category, name, unit, stock, order_qty, status) VALUES (%s, %s, %s, 0, 0, \'未発注\');',
+        "INSERT INTO ingredients (category, name, unit, stock, order_qty, status) VALUES (%s, %s, %s, 0, 0, '未発注');",
         (category, name, unit)
     )
     conn.commit()
@@ -86,7 +90,7 @@ def add_ingredient():
     return redirect('/')
 
 # ➕ 取引先の追加
-@app.route('/add_contact', method=['POST'])
+@app.route('/add_contact', methods=['POST'])
 def add_contact():
     name = request.form['name']
     phone = request.form['phone']
@@ -100,8 +104,8 @@ def add_contact():
     conn.close()
     return redirect('/')
 
-# 🔄 各食材の「保存」や「納品」などのアクションを一括受付
-@app.route('/action/<int:item_id>', method=['POST'])
+# 🔄 各食材のアクションを一括受付
+@app.route('/action/<int:item_id>', methods=['POST'])
 def handle_action(item_id):
     action_type = request.form.get('action_type')
     
@@ -109,7 +113,6 @@ def handle_action(item_id):
     cur = conn.cursor()
     
     if action_type == 'update_ingredient':
-        # ②在庫数と③単位、および発注予定数を手動で保存する
         stock = request.form.get('stock', 0)
         unit = request.form.get('unit', '個')
         order_qty = request.form.get('order_qty', 0)
@@ -120,18 +123,16 @@ def handle_action(item_id):
         )
         
     elif action_type == 'ordered':
-        # ④発注ボタンが押されたら「発注済み」にする
         order_qty = request.form.get('order_qty', 0)
         cur.execute(
-            'UPDATE ingredients SET status = \'発注済み\', order_qty = %s WHERE id = %s;',
+            "UPDATE ingredients SET status = '発注済み', order_qty = %s WHERE id = %s;",
             (order_qty, item_id)
         )
         
     elif action_type == 'deliver':
-        # ④納品ボタンが押されたら、在庫を増やして「未発注」に戻す
         order_qty = int(request.form.get('order_qty', 0))
         cur.execute(
-            'UPDATE ingredients SET stock = stock + %s, order_qty = 0, status = \'未発注\' WHERE id = %s;',
+            "UPDATE ingredients SET stock = stock + %s, order_qty = 0, status = '未発注' WHERE id = %s;",
             (order_qty, item_id)
         )
         
