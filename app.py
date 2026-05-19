@@ -7,8 +7,8 @@ app = Flask(__name__)
 
 # 👑 データベース接続関数
 def get_db_connection():
-    # .postgresql を削った、完全な正解URLに修正しました
-    DATABASE_URL = "postgresql://restaurant_db_user:XfT8087C9NHe9oT5n764r3M58bS07z0D@dpg-cuj6gbt6l47c73e160a0-a.singapore.render.com/restaurant_db"
+    # 教えていただいた100%正しいオレゴンのExternal URLに差し替えました
+    DATABASE_URL = "postgresql://restaurant_db_4ntk_user:Gk3pldNQ6ngxL5lbMWek5zYSMZ5aJnfl@dpg-d85ts5f7f7vs73dfrfu0-a.oregon-postgres.render.com/restaurant_db_4ntk"
     conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     return conn
 
