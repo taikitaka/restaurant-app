@@ -13,8 +13,8 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #f8f9fa; }
-        .qty-input { width: 50px; text-align: center; padding: 4px; }
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .qty-input { width: 60px; text-align: center; padding: 6px; font-size: 16px; } /* スマホ用に少し拡大 */
+        .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-order { background-color: #3498db; color: white; }
         .btn-deliver { background-color: #2ecc71; color: white; margin-left: 5px; }
         .btn-add { background-color: #34495e; color: white; }
@@ -65,11 +65,13 @@
                     </td>
                     <td>{{ item.stock }} {{ item.unit }}</td>
                     <td>
-                        <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
-                            <input type="number" name="order_qty" value="{{ item.order_qty }}" class="qty-input" min="0"> {{ item.unit }}
+                        <input type="number" id="qty-{{ item.id }}" value="{{ item.order_qty }}" class="qty-input" min="0"> {{ item.unit }}
                     </td>
                     <td>
-                            <button type="submit" name="action_type" value="order" class="btn btn-order">発注</button>
+                        <button type="button" class="btn btn-order" onclick="shareOrder('{{ item.name }}', '{{ item.id }}', '{{ item.unit }}')">🚀 発注</button>
+                        
+                        <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="order_qty" value="1">
                             <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
                         </form>
                     </td>
@@ -95,12 +97,43 @@
 </div>
 
 <script>
+// リストの表示・非表示切り替え
 function toggleList() {
     var container = document.getElementById('list-container');
     if (container.classList.contains('hidden-list')) {
         container.classList.remove('hidden-list');
     } else {
         container.classList.add('hidden-list');
+    }
+}
+
+// 📱 【新規追加】スマホのシェア機能を呼び出す魔法の関数
+function shareOrder(name, id, unit) {
+    // 画面に入力されている「発注数」をリアルタイムに取得
+    var qtyInput = document.getElementById('qty-' + id);
+    var qty = qtyInput ? qtyInput.value : 0;
+
+    if (parseInt(qty) <= 0) {
+        alert('発注数を1以上にしてください！');
+        return;
+    }
+
+    // 送信する発注文章の組み立て
+    var textMessage = "【発注依頼】\n以下の食材の発注をお願いします。\n\n・" + name + " ： " + qty + " " + unit + "\n\nよろしくお願いします。";
+
+    // スマホ標準のシェア機能（Web Share API）が使えるかチェック
+    if (navigator.share) {
+        navigator.share({
+            title: '食材発注',
+            text: textMessage
+        })
+        .then(() => console.log('シェア成功！'))
+        .catch((error) => console.log('シェアキャンセル', error));
+    } else {
+        // PCブラウザなど、シェア機能が使えない場合のバックアップ（クリップボードにコピー）
+        navigator.clipboard.writeText(textMessage).then(function() {
+            alert('このブラウザは直接シェアに対応していません。\n発注文章をコピーしましたので、LINE等に貼り付けてください！\n\n' + textMessage);
+        });
     }
 }
 </script>
