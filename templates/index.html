@@ -18,24 +18,24 @@
         .accordion-header:hover { background-color: #2c3e50; }
         .accordion-content { display: none; padding: 5px 0; border: 1px solid #ddd; border-top: none; border-radius: 0 0 6px 6px; background: #fff; margin-bottom: 10px; }
 
-        /* コンパクトなテーブル入力対応 */
+        /* コンパクトなテーブル */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
         th { background-color: #f8f9fa; color: #666; font-size: 11px; }
         
-        /* 入力ボックスの調整 */
+        /* 入力ボックス */
         .stock-input { width: 45px; padding: 4px; font-size: 13px; text-align: center; }
-        .unit-input { width: 35px; padding: 4px; font-size: 13px; text-align: center; color: #666; }
+        .unit-input { width: 45px; padding: 4px; font-size: 13px; text-align: center; color: #333; }
         .qty-input { width: 45px; text-align: center; padding: 4px; font-size: 13px; }
         
         /* ボタン類 */
-        .btn { padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .btn { padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; margin-right: 2px; }
         .btn-save { background-color: #7f8c8d; color: white; }
         .btn-order { background-color: #3498db; color: white; }
         .btn-deliver { background-color: #2ecc71; color: white; }
         .btn-add { background-color: #34495e; color: white; width: 100%; margin-top: 8px; box-sizing: border-box; font-size: 14px; padding: 10px; }
         
-        /* ④発注済みステータスバッジ */
+        /* ステータスバッジ */
         .badge { display: inline-block; padding: 3px 6px; font-size: 11px; border-radius: 4px; font-weight: bold; margin-top: 2px; }
         .badge-ordered { background-color: #e74c3c; color: white; }
         .badge-none { background-color: #bdc3c7; color: white; }
@@ -53,10 +53,10 @@
 
     <div id="list-container" class="hidden-list">
         
-        {# カテゴリのリストを定義してループで回す #}
-        {% for cat_name, cat_id in [('🥬 野菜エリア', 'content-veg'), ('🍖 肉類エリア', 'content-meat'), ('🧂 調味料エリア', 'content-season')] %}
+        {# カテゴリ判定をDBの登録文字（野菜/肉類/調味料）と完全に一致させました #}
+        {% for display_title, db_cat, cat_id in [('🥬 野菜エリア', '野菜', 'content-veg'), ('🍖 肉類エリア', '肉類', 'content-meat'), ('🧂 調味料エリア', '調味料', 'content-season')] %}
         <div class="accordion-header" onclick="toggleAccordion('{{ cat_id }}')">
-            <span>{{ cat_name }}</span>
+            <span>{{ display_title }}</span>
             <span class="arrow">▼</span>
         </div>
         <div id="{{ cat_id }}" class="accordion-content">
@@ -70,36 +70,45 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% set display_cat = cat_name.split(' ')[1] %}
-                    {% for item in ingredients if item.category == display_cat %}
-                    <tr>
-                        <td>
-                            <strong>{{ item.name }}</strong><br>
-                            {% if item.status == '発注済み' %}
-                            <span class="badge badge-ordered">発注済み</span>
-                            {% else %}
-                            <span class="badge badge-none">未発注</span>
-                            {% endif %}
-                        </td>
-                        
-                        <form action="/action/{{ item.id }}" method="POST" style="margin: 0;" id="form-{{ item.id }}">
+                    {% set ns = namespace(has_item=false) %}
+                    {% for item in ingredients %}
+                        {% if item.category == db_cat %}
+                        {% set ns.has_item = true %}
+                        <tr>
                             <td>
-                                <input type="number" name="stock" value="{{ item.stock }}" class="stock-input" min="0">
-                                <input type="text" name="unit" value="{{ item.unit }}" class="unit-input">
+                                <strong>{{ item.name }}</strong><br>
+                                {% if item.status == '発注済み' %}
+                                <span class="badge badge-ordered">発注済み</span>
+                                {% else %}
+                                <span class="badge badge-none">未発注</span>
+                                {% endif %}
                             </td>
-                            <td>
-                                <input type="number" name="order_qty" id="qty-{{ item.id }}" value="{{ item.order_qty }}" class="qty-input" min="0">
-                            </td>
-                            <td>
-                                <button type="submit" name="action_type" value="update_ingredient" class="btn btn-save" title="在庫・単位を保存">保存</button>
-                                
-                                <button type="button" class="btn btn-order" onclick="submitOrder('{{ item.id }}', '{{ item.name }}')">発注</button>
-                                
-                                <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
-                            </td>
-                        </form>
-                    </tr>
+                            
+                            <form action="/action/{{ item.id }}" method="POST" style="margin: 0;" id="form-{{ item.id }}">
+                                <td>
+                                    <input type="number" name="stock" value="{{ item.stock }}" class="stock-input" min="0">
+                                    <input type="text" name="unit" value="{{ item.unit }}" class="unit-input">
+                                </td>
+                                <td>
+                                    <input type="number" name="order_qty" id="qty-{{ item.id }}" value="{{ item.order_qty }}" class="qty-input" min="0">
+                                </td>
+                                <td>
+                                    <button type="submit" name="action_type" value="update_ingredient" class="btn btn-save" title="保存">保存</button>
+                                    <button type="button" class="btn btn-order" onclick="submitOrder('{{ item.id }}', '{{ item.name }}')">発注</button>
+                                    <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
+                                </td>
+                            </form>
+                        </tr>
+                        {% endif %}
                     {% endfor %}
+                    
+                    {% if not ns.has_item %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #999; padding: 15px;">
+                            このエリアにはまだ食材がありません。下のフォームから追加してください。
+                        </td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -156,13 +165,10 @@ function toggleAccordion(contentId) {
     content.style.display = (content.style.display === "block") ? "none" : "block";
 }
 
-// ①＆④ 発注処理（メッセージ送信ウィンドウを開きつつ、裏でステータスを「発注済み」に書き換える）
 function submitOrder(itemId, name) {
     var qtyInput = document.getElementById('qty-' + itemId);
     var form = document.getElementById('form-' + itemId);
     var qty = qtyInput ? qtyInput.value : 0;
-    
-    // フォーム内の最新の単位を取得
     var unit = form.querySelector('input[name="unit"]').value;
 
     if (parseInt(qty) <= 0) {
@@ -172,7 +178,6 @@ function submitOrder(itemId, name) {
 
     var textMessage = "【発注依頼】\n以下の食材の発注をお願いします。\n\n・" + name + " ： " + qty + " " + unit + "\n\nよろしくお願いします。";
 
-    // 1. まずはLINEやメールへのシェア（またはコピー）を起動
     if (navigator.share) {
         navigator.share({ title: '食材発注', text: textMessage })
         .then(() => { executeOrderSubmit(form); })
@@ -185,9 +190,7 @@ function submitOrder(itemId, name) {
     }
 }
 
-// 実際に「発注済み」としてデータを送信する
 function executeOrderSubmit(form) {
-    // 隠しデータとしてaction_type=orderedをセットして送信
     var hiddenInput = document.createElement('input');
     hiddenInput.type = 'hidden';
     hiddenInput.name = 'action_type';
