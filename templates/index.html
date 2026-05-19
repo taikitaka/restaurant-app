@@ -18,6 +18,25 @@
         .btn-order { background-color: #3498db; color: white; }
         .btn-deliver { background-color: #2ecc71; color: white; margin-left: 5px; }
         .btn-add { background-color: #34495e; color: white; }
+        
+        /* 📱 追加したデザイン：リストを開く大きなボタン */
+        .btn-toggle {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        /* 最初はリストを隠しておくための設定 */
+        .hidden-list {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -25,7 +44,6 @@
 <div class="container">
     <h1>⏱️ 5分で完了！簡単発注</h1>
 
-    <!-- 食材追加フォーム -->
     <div class="add-form">
         <h3>食材の追加</h3>
         <form action="/add" method="POST">
@@ -40,39 +58,52 @@
         </form>
     </div>
 
-    <!-- 在庫・発注リスト -->
-    <table>
-        <thead>
-            <tr>
-                <th>食材名</th>
-                <th>在庫</th>
-                <th>発注数</th>
-                <th>アクション</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in ingredients %}
-            <tr>
-                <td>
-                    <strong>{{ item.name }}</strong><br>
-                    <small style="color: #888;">{{ item.category }}</small>
-                </td>
-                <td>{{ item.stock }} {{ item.unit }}</td>
-                <td>
-                    <!-- 各行ごとに独立したフォーム -->
-                    <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
-                        <input type="number" name="order_qty" value="{{ item.order_qty }}" class="qty-input" min="0"> {{ item.unit }}
-                </td>
-                <td>
-                        <button type="submit" name="action_type" value="order" class="btn btn-order">発注</button>
-                        <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <button type="button" class="btn-toggle" onclick="toggleList()">📋 在庫・発注リストを表示する</button>
+
+    <div id="list-container" class="hidden-list">
+        <table>
+            <thead>
+                <tr>
+                    <th>食材名</th>
+                    <th>在庫</th>
+                    <th>発注数</th>
+                    <th>アクション</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in ingredients %}
+                <tr>
+                    <td>
+                        <strong>{{ item.name }}</strong><br>
+                        <small style="color: #888;">{{ item.category }}</small>
+                    </td>
+                    <td>{{ item.stock }} {{ item.unit }}</td>
+                    <td>
+                        <form action="/action/{{ item.id }}" method="POST" style="display: inline;">
+                            <input type="number" name="order_qty" value="{{ item.order_qty }}" class="qty-input" min="0"> {{ item.unit }}
+                    </td>
+                    <td>
+                            <button type="submit" name="action_type" value="order" class="btn btn-order">発注</button>
+                            <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<script>
+function toggleList() {
+    var container = document.getElementById('list-container');
+    if (container.classList.contains('hidden-list')) {
+        container.classList.remove('hidden-list');
+    } else {
+        container.classList.add('hidden-list');
+    }
+}
+</script>
 
 </body>
 </html>
