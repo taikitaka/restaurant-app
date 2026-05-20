@@ -100,8 +100,7 @@
                                 <td>
                                     <button type="submit" name="action_type" value="update_ingredient" class="btn btn-save" title="保存">保存</button>
                                     <button type="button" class="btn btn-order" onclick="submitOrder('{{ item.id }}', '{{ item.name }}')">発注</button>
-                                    <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
-    
+                                    
                                     <form action="/action/delete/{{ item.id }}" method="POST" id="delete-form-{{ item.id }}" style="display: none;"></form>
                                 </td>
                                 </form>
@@ -132,6 +131,12 @@
                 <input type="text" name="name" placeholder="食材名（例: 玉ねぎ）" required>
                 <input type="text" name="unit" placeholder="単位（例: 個）" required>
                 <button type="submit" class="btn btn-add">リストに追加</button>
+            </form>
+        </div> <div style="margin: 20px 0 10px 0;">
+            <form action="/action/deliver_all" method="POST" onsubmit="return confirm('発注済みの食材をすべて一括で納品しますか？\n（在庫数が自動で加算されます）')">
+                <button type="submit" class="btn" style="background-color: #2ecc71; color: white; width: 100%; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    🚚 到着した食材を一括で納品する
+                </button>
             </form>
         </div>
     </div>
