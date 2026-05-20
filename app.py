@@ -141,6 +141,20 @@ def handle_action(item_id):
     conn.close()
     return redirect('/')
 
+# 🗑️ 食材の削除機能を追加
+@app.route('/action/delete/<int:item_id>', methods=['POST'])
+def delete_ingredient(item_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # 指定されたIDの食材をデータベースから削除するSQL
+    cur.execute('DELETE FROM ingredients WHERE id = %s;', (item_id,))
+    
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect('/')
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)

@@ -76,7 +76,12 @@
                         {% set ns.has_item = true %}
                         <tr>
                             <td>
-                                <strong>{{ item.name }}</strong><br>
+                                <strong class="ingredient-name" 
+                                        data-id="{{ item.id }}" 
+                                        data-name="{{ item.name }}"
+                                        style="cursor: pointer; user-select: none; -webkit-user-select: none;">
+                                    {{ item.name }}
+                                </strong><br>
                                 {% if item.status == '発注済み' %}
                                 <span class="badge badge-ordered">発注済み</span>
                                 {% else %}
@@ -96,8 +101,10 @@
                                     <button type="submit" name="action_type" value="update_ingredient" class="btn btn-save" title="保存">保存</button>
                                     <button type="button" class="btn btn-order" onclick="submitOrder('{{ item.id }}', '{{ item.name }}')">発注</button>
                                     <button type="submit" name="action_type" value="deliver" class="btn btn-deliver">納品</button>
+    
+                                    <form action="/action/delete/{{ item.id }}" method="POST" id="delete-form-{{ item.id }}" style="display: none;"></form>
                                 </td>
-                            </form>
+                                </form>
                         </tr>
                         {% endif %}
                     {% endfor %}
@@ -198,6 +205,32 @@ function executeOrderSubmit(form) {
     form.appendChild(hiddenInput);
     form.submit();
 }
+let longTouchTimer;
+const LONG_PRESS_TIME = 800; 
+
+document.querySelectorAll('.ingredient-name').forEach(element => {
+    const startPress = () => {
+        const itemId = element.getAttribute('data-id');
+        const itemName = element.getAttribute('data-name');
+        
+        longTouchTimer = setTimeout(() => {
+            if (confirm(`「${itemName}」をリストから削除しますか？`)) {
+                document.getElementById(`delete-form-${itemId}`).submit();
+            }
+        }, LONG_PRESS_TIME);
+    };
+
+    const cancelPress = () => {
+        clearTimeout(longTouchTimer);
+    };
+
+    element.addEventListener('touchstart', startPress);
+    element.addEventListener('touchend', cancelPress);
+    element.addEventListener('touchmove', cancelPress);
+    element.addEventListener('mousedown', startPress);
+    element.addEventListener('mouseup', cancelPress);
+    element.addEventListener('mouseleave', cancelPress);
+});
 </script>
 
 </body>
